@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RunnerPro — TikTok Intelligence</title>
+<style>
+  :root{--bg:#0d0d12;--panel:#16161f;--panel2:#1d1d28;--line:#2a2a38;--txt:#e8e8f0;--muted:#9090a8;--accent:#8b7bff;--blue:#5bb8ff;--gold:#ffcb5b;--green:#3ad17a;}
+  *{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  .app{display:flex;height:100vh;overflow:hidden}
+  .side{width:248px;flex:none;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:14px 10px;overflow:auto}
+  .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 14px}
+  .logo{width:30px;height:30px;border-radius:8px;background:var(--accent);display:grid;place-items:center;font-weight:800;color:#fff}
+  .brand b{font-size:15px}.brand div small{color:var(--muted);font-size:11px}
+  .navlbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;padding:12px 10px 4px}
+  .nav{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;color:var(--txt);font-size:13.5px;border:1px solid transparent}
+  .nav:hover{background:var(--panel2)}
+  .nav.on{background:var(--panel2);border-color:var(--accent)}
+  .nav .ic{width:20px;text-align:center}
+  .nav small{display:block;color:var(--muted);font-size:11px;margin-top:1px}
+  .main{flex:1;position:relative}
+  iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:var(--bg)}
+  .ph{position:absolute;inset:0;display:none;place-items:center;color:var(--muted);font-size:13px}
+  .foot{margin-top:auto;padding:10px;color:var(--muted);font-size:11px;border-top:1px solid var(--line)}
+</style></head>
+<body>
+<div class="app">
+  <nav class="side">
+    <div class="brand"><div class="logo">R</div><div><b>RunnerPro Intel</b><br><small>TikTok content DB</small></div></div>
+    <div class="navlbl">Carnada (no-demo)</div>
+    <div class="nav on" data-src="no-demo/outliers.html"><span class="ic">🏃</span><div>Outliers no-demo<small>6.483 outliers · 5.772 frames</small></div></div>
+    <div class="nav" data-src="no-demo/all.html"><span class="ic">🗺️</span><div>Mapa de feeders<small>545 perfiles curados</small></div></div>
+    <div class="navlbl">Demo (venden app)</div>
+    <div class="nav" data-src="index.html"><span class="ic">📱</span><div>Apps spytok<small>218 apps → outliers</small></div></div>
+    <div class="nav" data-src="demo_outliers.html"><span class="ic">🎬</span><div>Vídeos demo<small>1.810 vídeos · 1.712 storyboard</small></div></div>
+    <div class="foot">Click en cualquier vídeo → ficha completa (visión + storyboard + transcript). Cada vista carga al abrirla.</div>
+  </nav>
+  <div class="main">
+    <iframe id="fr" src="no-demo/outliers.html"></iframe>
+  </div>
+</div>
+<script>
+const navs=[...document.querySelectorAll('.nav')];
+navs.forEach(n=>n.addEventListener('click',()=>{
+  navs.forEach(x=>x.classList.remove('on')); n.classList.add('on');
+  document.getElementById('fr').src=n.dataset.src;
+}));
+</script>
+</body></html>

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SpyTok DB — Visualizador</title>
+<style>
+  :root{
+    --bg:#0d0d12; --panel:#16161f; --panel2:#1d1d28; --line:#2a2a38;
+    --txt:#e8e8f0; --muted:#9090a8; --accent:#8b7bff; --green:#3ad17a; --red:#ff5d6c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  a{color:var(--accent);text-decoration:none}
+  header{position:sticky;top:0;z-index:30;background:rgba(13,13,18,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:12px 18px}
+  .brand{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .logo{width:30px;height:30px;border-radius:8px;background:var(--accent);display:grid;place-items:center;font-weight:800;color:#fff}
+  h1{font-size:18px;margin:0}
+  .totals{color:var(--muted);font-size:12px}
+  .controls{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+  input,select{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 10px;font-size:13px}
+  input{flex:1;min-width:200px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;padding:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;transition:.15s;display:flex;flex-direction:column;gap:8px}
+  .card:hover{border-color:var(--accent);transform:translateY(-2px)}
+  .caphead{display:flex;gap:10px;align-items:center}
+  .icon{width:46px;height:46px;border-radius:11px;object-fit:cover;background:var(--panel2);flex:none}
+  .nm{font-weight:700;font-size:14px;line-height:1.2}
+  .dev{color:var(--muted);font-size:11px}
+  .badges{display:flex;gap:6px;flex-wrap:wrap;font-size:11px}
+  .pill{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:2px 8px}
+  .rk{font-weight:700}
+  .up{color:var(--green)} .dn{color:var(--red)}
+  .spark{height:34px;width:100%}
+  .meta{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:auto}
+  /* overlay */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;display:none}
+  .overlay.on{display:block}
+  .drawer{position:absolute;right:0;top:0;bottom:0;width:min(920px,96vw);background:var(--bg);border-left:1px solid var(--line);overflow:auto;padding:0}
+  .dhead{position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--line);padding:16px 18px;display:flex;gap:14px;align-items:center;z-index:5}
+  .dhead .icon{width:60px;height:60px}
+  .close{margin-left:auto;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 12px;cursor:pointer}
+  .sec{padding:16px 18px;border-bottom:1px solid var(--line)}
+  .sec h3{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  .kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .kv div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px}
+  .kv b{display:block;font-size:11px;color:var(--muted);font-weight:500}
+  .creator{border:1px solid var(--line);border-radius:10px;margin:10px 0;overflow:hidden}
+  .crhead{padding:10px 12px;background:var(--panel);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .crhead .u{font-weight:700}
+  .posts{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;padding:12px}
+  .post{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+  .cover{width:100%;aspect-ratio:9/16;object-fit:cover;background:var(--panel2);display:block}
+  .pbody{padding:8px;display:flex;flex-direction:column;gap:6px}
+  .pmetrics{display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--muted)}
+  .pdesc{font-size:12px;max-height:48px;overflow:hidden}
+  .mult{position:absolute;margin:6px;background:var(--red);color:#fff;font-weight:700;font-size:11px;padding:2px 7px;border-radius:999px}
+  .pwrap{position:relative}
+  details{font-size:12px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+  details summary{cursor:pointer;color:var(--accent)}
+  details pre{white-space:pre-wrap;word-break:break-word;margin:6px 0 0;font:12px/1.4 inherit;color:var(--txt)}
+  .btnrow{display:flex;gap:6px}
+  .btn{flex:1;text-align:center;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px;font-size:11px;cursor:pointer}
+  .empty{color:var(--muted);padding:18px}
+  .sortbar{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:12px;margin:0 18px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">S</div>
+    <div>
+      <h1>SpyTok — Base de datos</h1>
+      <div class="totals" id="totals"></div>
+    </div>
+  </div>
+  <div class="controls">
+    <input id="q" placeholder="Buscar app, developer o creator…">
+    <select id="cat"></select>
+    <select id="sort">
+      <option value="rank">Rank ↑</option>
+      <option value="outlierViews">Outlier views ↓</option>
+      <option value="videos">Nº videos ↓</option>
+      <option value="d1">Subida 1d ↓</option>
+      <option value="ratings">Ratings ↓</option>
+    </select>
+  </div>
+</header>
+
+<div class="grid" id="grid"></div>
+
+<div class="overlay" id="overlay"><div class="drawer" id="drawer"></div></div>
+<div class="overlay" id="voverlay" style="z-index:60"><div class="drawer" id="vdrawer" style="width:min(620px,96vw)"></div></div>
+
+<script src="data.js"></script>
+<script src="data_demo.js"></script>
+<script>
+const D = window.DATA;
+const VMAP = {};
+(function(){ try{ (window.DEMO&&window.DEMO.videos||[]).forEach(v=>{ VMAP[v.id]=v; }); }catch(e){} })();
+function vidId(u){ if(!u) return null; let m=String(u).match(/\/video\/(\d+)/)||String(u).match(/\/(\d+)\.mp4/); return m?m[1]:null; }
+function vkv(k,val){ return val?`<div style="padding:7px 0;border-bottom:1px solid var(--line)"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${k}</div><div>${escv(val)}</div></div>`:''; }
+function escv(s){return String(s==null?'':s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+function sbBlock(sb){ if(!sb) return ''; const L=[['Resumen visual','visual_summary'],['Personaje principal','main_character'],['Acción','action'],['Elementos','elements'],['Escenario','setting'],['Desarrollo (escena a escena)','development'],['Hook 0-3s (y por qué retiene)','hook_0_3s'],['Después del hook','post_hook'],['Retention drivers','retention_drivers'],['Títulos en pantalla','titles_on_screen'],['Ritmo','pacing'],['Lo importante','whats_important']]; return `<div style="margin-top:14px;padding-top:10px;border-top:2px solid var(--accent)"><div style="font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:4px">🎬 Storyboard — análisis del vídeo completo</div>${L.map(([k,f])=>vkv(k,sb[f])).join('')}</div>`; }
+function openVid(id, fallback){
+  const v = VMAP[id] || {};
+  const f = {...(fallback||{}), ...v};
+  const frame = v.frame || (fallback&&fallback.cover) || '';
+  document.getElementById("vdrawer").innerHTML = `
+    <div class="dhead"><div><div class="nm" style="font-size:16px">${escv(f.app||fallback&&fallback.app||'Outlier')}</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:4px">👁 ${fmt(f.views)} ${f.mult?'· '+f.mult+'x':''} ${(f.date||'').slice(0,10)}</div></div>
+      <button class="close" onclick="closeVid()">✕ Cerrar</button></div>
+    <div class="sec">
+      ${frame?`<img src="${frame}" style="width:100%;max-width:280px;border-radius:10px;display:block;margin:0 auto 12px" onerror="this.style.display='none'">`:''}
+      ${vkv('Tipo de inicio (visión)',f.opening_type)}
+      ${vkv('Muestra app',f.shows_app===true?'sí':f.shows_app===false?'no':'')}
+      ${vkv('Escena',f.scene)}
+      ${vkv('Texto en pantalla',f.on_screen_text)}
+      ${vkv('Hook',f.hook)}
+      ${vkv('Formato',f.format_signature)}
+      ${vkv('Tema / qué vende',f.topic)}
+      ${vkv('Caption',f.desc)}
+      ${f.transcript?`<details open><summary style="cursor:pointer;color:var(--accent)">Transcripción</summary><pre style="white-space:pre-wrap;font:12px/1.4 inherit">${escv(f.transcript)}</pre></details>`:''}
+      ${sbBlock(f.sb)}
+      <div style="padding:10px 0"><a class="btn" style="border-color:var(--accent);color:var(--accent)" href="${(fallback&&(fallback.post||fallback.link))||f.url||'#'}" target="_blank">▶ Ver vídeo en TikTok ↗</a></div>
+      ${(!f.opening_type&&!f.sb)?'<div class="empty" style="padding:8px 0">⏳ Este outlier aún no tiene visión/storyboard procesado</div>':''}
+    </div>`;
+  document.getElementById("voverlay").classList.add("on");document.getElementById("vdrawer").scrollTop=0;
+}
+function closeVid(){document.getElementById("voverlay").classList.remove("on");}
+document.getElementById("voverlay").addEventListener("click",e=>{if(e.target.id==="voverlay")closeVid();});
+function openVidEl(el){ openVid(el.dataset.vid, {cover:el.dataset.cover, post:el.dataset.url, app:el.dataset.app}); }
+const fmt = n => n==null ? "—" : Intl.NumberFormat("es").format(n);
+const delta = v => v==null ? "" : `<span class="${v>0?'up':v<0?'dn':''}">${v>0?'▲':v<0?'▼':''}${Math.abs(v)}</span>`;
+
+document.getElementById("totals").textContent =
+  `${D.totals.apps} apps · ${D.totals.videos} videos · ${D.totals.appsWithPosts} apps con publicaciones`;
+
+// category filter
+const cats = [...new Set(D.apps.map(a=>a.cat).filter(Boolean))].sort();
+const catSel = document.getElementById("cat");
+catSel.innerHTML = `<option value="">Todas las categorías</option>` + cats.map(c=>`<option>${c}</option>`).join("");
+
+function sparkSVG(spark, w=260, h=34){
+  if(!spark || spark.length<2) return "";
+  const ranks = spark.map(s=>s.r);
+  const mn = Math.min(...ranks), mx = Math.max(...ranks);
+  const span = (mx-mn)||1;
+  const pts = spark.map((s,i)=>{
+    const x = i/(spark.length-1)*w;
+    const y = (s.r-mn)/span*(h-6)+3; // lower rank = better = higher line
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="#8b7bff" stroke-width="2"/></svg>`;
+}
+
+function appVideos(a){ return a.creators.reduce((s,c)=>s+c.posts.length,0); }
+
+function cardHTML(a){
+  const spark = a.rankings && a.rankings[0] ? sparkSVG(a.rankings[0].spark) : "";
+  return `<div class="card" data-id="${a.trackId}">
+    <div class="caphead">
+      <img class="icon" loading="lazy" src="${a.icon||''}" onerror="this.style.visibility='hidden'">
+      <div>
+        <div class="nm">${a.name||a.trackId}</div>
+        <div class="dev">${a.dev||''}</div>
+      </div>
+    </div>
+    <div class="badges">
+      <span class="pill rk">#${fmt(a.rank)}</span>
+      <span class="pill">${a.cat||'—'}</span>
+      <span class="pill">${(a.country||'').toUpperCase()}</span>
+      <span class="pill">1d ${delta(a.d1)}</span>
+      <span class="pill">7d ${delta(a.d7)}</span>
+    </div>
+    ${spark}
+    <div class="meta">
+      <span>${fmt(a.summary.totalOutliers)} outliers · ${a.creators.length} creators</span>
+      <span>${fmt(a.summary.totalOutlierViews)} outlier views</span>
+    </div>
+  </div>`;
+}
+
+function render(){
+  const q = document.getElementById("q").value.toLowerCase().trim();
+  const cat = catSel.value;
+  const sort = document.getElementById("sort").value;
+  let list = D.apps.filter(a=>{
+    if(cat && a.cat!==cat) return false;
+    if(!q) return true;
+    if((a.name||'').toLowerCase().includes(q)) return true;
+    if((a.dev||'').toLowerCase().includes(q)) return true;
+    return a.creators.some(c=>(c.username||'').toLowerCase().includes(q));
+  });
+  list.sort((x,y)=>{
+    if(sort==="rank") return (x.rank??9e9)-(y.rank??9e9);
+    if(sort==="outlierViews") return (y.summary.totalOutlierViews||0)-(x.summary.totalOutlierViews||0);
+    if(sort==="videos") return appVideos(y)-appVideos(x);
+    if(sort==="d1") return (y.d1||-9e9)-(x.d1||-9e9);
+    if(sort==="ratings") return (y.ratings||0)-(x.ratings||0);
+    return 0;
+  });
+  document.getElementById("grid").innerHTML = list.length ? list.map(cardHTML).join("") : `<div class="empty">Sin resultados</div>`;
+}
+
+// detail drawer
+function postHTML(p){
+  const cover = p.cover || (p.slides&&p.slides[0]) || "";
+  const play = p.video || p.post || "#";
+  const bp = p.blueprint ? `<details><summary>Blueprint</summary><pre>${esc(typeof p.blueprint==='string'?p.blueprint:JSON.stringify(p.blueprint,null,2))}</pre></details>`:"";
+  const tr = p.transcript ? `<details><summary>Transcript</summary><pre>${esc(typeof p.transcript==='string'?p.transcript:JSON.stringify(p.transcript,null,2))}</pre></details>`:"";
+  const an = p.analysis ? `<details><summary>Análisis</summary><pre>${esc(typeof p.analysis==='string'?p.analysis:JSON.stringify(p.analysis,null,2))}</pre></details>`:"";
+  const vid = vidId(p.post)||vidId(p.video)||'';
+  return `<div class="post" style="cursor:pointer" data-vid="${vid}" data-cover="${cover}" data-url="${p.post||p.video||''}" onclick="openVidEl(this)">
+    <div class="pwrap">
+      ${p.mult?`<span class="mult">${p.mult}x</span>`:""}
+      <img class="cover" loading="lazy" src="${cover}" onerror="this.style.visibility='hidden'">
+    </div>
+    <div class="pbody">
+      <div class="pmetrics">
+        <span>👁 ${fmt(p.views)}</span><span>❤ ${fmt(p.likes)}</span>
+        <span>💬 ${fmt(p.comments)}</span><span>🔖 ${fmt(p.saves)}</span><span>↗ ${fmt(p.shares)}</span>
+      </div>
+      <div class="pdesc">${esc(p.desc||'')}</div>
+      <div style="font-size:11px;color:var(--muted)">${(p.date||'').slice(0,10)} · ${p.type||''}</div>
+      <div class="btnrow" onclick="event.stopPropagation()">
+        ${p.video?`<a class="btn" href="${p.video}" target="_blank">▶ Video</a>`:""}
+        ${p.post?`<a class="btn" href="${p.post}" target="_blank">TikTok</a>`:""}
+      </div>
+      ${bp}${tr}${an}
+    </div>
+  </div>`;
+}
+
+function esc(s){return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+
+function openApp(id){
+  const a = D.apps.find(x=>x.trackId===id);
+  if(!a) return;
+  const rk = a.rankings.map(r=>`<div class="sec"><h3>${(r.country||'').toUpperCase()} · cat ${r.category} · rank #${r.rank}</h3>${sparkSVG(r.spark,600,60)}</div>`).join("");
+  const creators = a.creators.length ? a.creators.map(c=>`
+    <div class="creator">
+      <div class="crhead">
+        <span class="u">@${c.username||'—'}</span>
+        <span class="pill">${fmt(c.followers)} followers</span>
+        <span class="pill">${fmt(c.totalViews)} views</span>
+        <span class="pill">conf: ${c.conf||'—'}</span>
+        ${c.posts.length?`<span class="pill">${c.posts.length} videos</span>`:""}
+        <a class="pill" href="https://www.tiktok.com/@${c.username}" target="_blank">TikTok ↗</a>
+      </div>
+      ${c.bio?`<div style="padding:0 12px;color:var(--muted);font-size:12px">${esc(c.bio)}</div>`:""}
+      ${c.reason?`<div style="padding:4px 12px;font-size:12px"><b style="color:var(--muted)">LLM:</b> ${esc(c.reason)}</div>`:""}
+      ${c.posts.length?`<div class="posts">${c.posts.slice().sort((p,q)=>(q.views||0)-(p.views||0)).map(postHTML).join("")}</div>`:`<div class="empty">Sin posts descargados</div>`}
+    </div>`).join("") : `<div class="empty">Este app no tiene creators/posts escaneados.</div>`;
+
+  const topo = (a.topOutliers && a.topOutliers.length) ? `
+    <div class="sec">
+      <h3>Top outliers (links) — ${a.topOutliers.length}</h3>
+      <div class="posts">
+        ${a.topOutliers.slice().sort((p,q)=>(q.views||0)-(p.views||0)).map(p=>`
+          <div class="post" style="cursor:pointer" data-vid="${vidId(p.link)||''}" data-cover="${p.coverLink||''}" data-url="${p.link||''}" data-app="${esc(a.name||'')}" onclick="openVidEl(this)"><div class="pwrap">
+            ${p.outlierMultiplier?`<span class="mult">${Math.round(p.outlierMultiplier)}x</span>`:""}
+            <img class="cover" loading="lazy" src="${p.coverLink||''}" onerror="this.style.visibility='hidden'">
+          </div>
+          <div class="pbody">
+            <div class="pmetrics"><span>👁 ${fmt(p.views)}</span></div>
+            <div class="btnrow" onclick="event.stopPropagation()"><a class="btn" href="${p.link||'#'}" target="_blank">TikTok ↗</a></div>
+          </div></div>`).join("")}
+      </div>
+    </div>` : "";
+
+  document.getElementById("drawer").innerHTML = `
+    <div class="dhead">
+      <img class="icon" src="${a.icon||''}" onerror="this.style.visibility='hidden'">
+      <div>
+        <div class="nm" style="font-size:18px">${a.name}</div>
+        <div class="dev">${a.dev||''} · trackId ${a.trackId}</div>
+      </div>
+      <button class="close" onclick="closeDrawer()">✕ Cerrar</button>
+    </div>
+    <div class="sec">
+      <h3>App</h3>
+      <div class="kv">
+        <div><b>Rank actual</b>#${fmt(a.rank)}</div>
+        <div><b>Categoría</b>${a.cat||'—'} (${a.catId})</div>
+        <div><b>Chart</b>${a.chart||'—'}</div>
+        <div><b>Países</b>${(a.countries||[]).join(', ').toUpperCase()||'—'}</div>
+        <div><b>Δ 1d</b>${delta(a.d1)||'—'}</div>
+        <div><b>Δ 7d</b>${delta(a.d7)||'—'}</div>
+        <div><b>Δ 14d</b>${delta(a.d14)||'—'}</div>
+        <div><b>Δ 30d</b>${delta(a.d30)||'—'}</div>
+        <div><b>Velocity 7d</b>${fmt(a.vel)}</div>
+        <div><b>Mover</b>${a.moverType||'—'}${a.spike?' · spike':''}</div>
+        <div><b>Ratings</b>${fmt(a.ratings)}</div>
+        <div><b>Release</b>${(a.release||'').slice(0,10)}</div>
+        <div><b>TikTok ratio</b>${a.tiktokRatio??'—'}</div>
+        <div><b>Outliers</b>${fmt(a.summary.totalOutliers)}</div>
+        <div><b>Outlier views</b>${fmt(a.summary.totalOutlierViews)}</div>
+        <div><b>Authors</b>${fmt(a.summary.matchCount)} / ${fmt(a.summary.totalResults)}</div>
+      </div>
+    </div>
+    ${rk}
+    ${topo}
+    <div class="sec"><h3>Creators & Publicaciones detalladas (${appVideos(a)} videos con transcript/blueprint)</h3>${creators}</div>
+  `;
+  document.getElementById("overlay").classList.add("on");
+  document.getElementById("drawer").scrollTop=0;
+}
+function closeDrawer(){document.getElementById("overlay").classList.remove("on");}
+
+document.getElementById("grid").addEventListener("click",e=>{
+  const c=e.target.closest(".card"); if(c) openApp(c.dataset.id);
+});
+document.getElementById("overlay").addEventListener("click",e=>{ if(e.target.id==="overlay") closeDrawer(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeDrawer(); });
+["q","cat","sort"].forEach(id=>document.getElementById(id).addEventListener("input",render));
+render();
+</script>
+</body>
+</html>

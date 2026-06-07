@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RunnerPro — Mapa de feeders (runner + adyacente)</title>
+<style>
+  :root{--bg:#0d0d12;--panel:#16161f;--panel2:#1d1d28;--line:#2a2a38;--txt:#e8e8f0;--muted:#9090a8;--accent:#8b7bff;--green:#3ad17a;--red:#ff5d6c;--gold:#ffcb5b;--blue:#5bb8ff;}
+  *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  a{color:var(--accent);text-decoration:none}
+  header{position:sticky;top:0;z-index:30;background:rgba(13,13,18,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:12px 18px}
+  .brand{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.logo{width:30px;height:30px;border-radius:8px;background:var(--accent);display:grid;place-items:center;font-weight:800;color:#fff}
+  h1{font-size:18px;margin:0}.totals{color:var(--muted);font-size:12px}
+  .controls{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  input,select{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 10px;font-size:13px}input{flex:1;min-width:180px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px;padding:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;transition:.15s;display:flex;flex-direction:column;gap:8px}
+  .card:hover{border-color:var(--accent);transform:translateY(-2px)}
+  .l-runner{border-left:3px solid var(--accent)}.l-adyacente{border-left:3px solid var(--blue)}
+  .row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+  .nm{font-weight:700;font-size:15px}.sim{font-weight:800;font-size:20px}
+  .badges{display:flex;gap:6px;flex-wrap:wrap;font-size:11px}
+  .pill{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:2px 8px}
+  .v-feeder_ideal,.v-blend_feeder{color:var(--gold);border-color:var(--gold)}.v-feeder_secundario{color:var(--green);border-color:var(--green)}
+  .v-solo_formato,.v-format_source{color:var(--blue);border-color:var(--blue)}.v-descartar{color:var(--red);border-color:var(--red)}
+  .reason{font-size:12px;color:var(--muted)}.fmt{font-size:11px}
+  .reskin{font-size:11px;color:var(--gold);background:rgba(255,203,91,.08);border:1px solid rgba(255,203,91,.25);border-radius:6px;padding:5px 7px}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;display:none}.overlay.on{display:block}
+  .drawer{position:absolute;right:0;top:0;bottom:0;width:min(820px,96vw);background:var(--bg);border-left:1px solid var(--line);overflow:auto}
+  .dhead{position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--line);padding:16px 18px;display:flex;gap:12px;align-items:center;z-index:5}
+  .close{margin-left:auto;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 12px;cursor:pointer}
+  .sec{padding:14px 18px;border-bottom:1px solid var(--line)}.sec h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  .kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}.kv div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px}.kv b{display:block;font-size:11px;color:var(--muted)}
+  .vid{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px}.vid .vw{color:var(--muted);white-space:nowrap}
+  .empty{color:var(--muted);padding:18px}.btn{display:block;text-align:center;border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:6px;font-size:11px}
+</style></head>
+<body>
+<header>
+  <div class="brand"><div class="logo">R</div><div><h1>RunnerPro — Mapa de feeders</h1><div class="totals" id="totals"></div></div></div>
+  <div class="controls">
+    <input id="q" placeholder="Buscar handle, formato, re-skin…">
+    <select id="layer"><option value="">Todas las capas</option><option value="runner">🟣 runner</option><option value="adyacente">🔵 adyacente</option></select>
+    <select id="verd"><option value="">Veredicto</option><option value="feeder_ideal">⭐ feeder_ideal</option><option value="blend_feeder">⭐ blend_feeder</option><option value="feeder_secundario">feeder_secundario</option><option value="format_source">format_source</option><option value="solo_formato">solo_formato</option><option value="descartar">descartar</option></select>
+    <select id="cat"></select>
+    <select id="sort"><option value="sim">Similaridad ↓</option><option value="surf">Surf views ↓</option><option value="q">Calidad ↓</option></select>
+  </div>
+</header>
+<div class="grid" id="grid"></div>
+<div class="overlay" id="overlay"><div class="drawer" id="drawer"></div></div>
+<script src="data_all.js"></script>
+<script>
+const D=window.ALL; const fmt=n=>n==null?"—":Intl.NumberFormat("es").format(n);
+const esc=s=>String(s||'').replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const t=D.totals;
+document.getElementById("totals").textContent=`${t.total} perfiles · 🟣${t.runner} runner · 🔵${t.adyacente} adyacente · ${t.feeders} feeders · ${t.format} fuente-formato`;
+const cats=[...new Set(D.profiles.map(p=>p.cat).filter(Boolean))].sort();
+document.getElementById("cat").innerHTML='<option value="">Categoría</option>'+cats.map(c=>`<option>${c}</option>`).join("");
+function vlabel(v){return v.replace('feeder_','').replace('_',' ');}
+function card(p){
+  return `<div class="card l-${p.layer}" data-h="${p.handle}">
+    <div class="row"><div><div class="nm">@${p.handle}</div><div class="badges" style="margin-top:4px">
+      <span class="pill v-${p.verdict}">${vlabel(p.verdict)}</span><span class="pill">${p.cat||''}</span>${p.english===false?'<span class="pill v-descartar">no-EN</span>':''}
+    </div></div><div class="sim" style="color:${p.similarity>=85?'var(--gold)':p.similarity>=70?'var(--green)':'var(--muted)'}">${p.similarity??'—'}</div></div>
+    <div class="badges"><span class="pill">🔥 ${fmt(p.surf_views)}</span><span class="pill">Q${p.quality||'?'}</span>${p.feature?`<span class="pill">⚙ ${esc(p.feature).slice(0,24)}</span>`:''}</div>
+    <div class="fmt">${(p.top_formats||[]).slice(0,2).map(f=>'• '+esc(f)).join('<br>')}</div>
+    ${p.reskin?`<div class="reskin">♻ ${esc(p.reskin)}</div>`:`<div class="reason">${esc(p.reason)}</div>`}
+    <a class="btn" href="${p.profile_url}" target="_blank" onclick="event.stopPropagation()">▶ Ver perfil TikTok ↗</a>
+  </div>`;
+}
+function render(){
+  const q=document.getElementById("q").value.toLowerCase().trim();
+  const ly=document.getElementById("layer").value,v=document.getElementById("verd").value,c=document.getElementById("cat").value,s=document.getElementById("sort").value;
+  let L=D.profiles.filter(p=>{
+    if(ly&&p.layer!==ly)return false; if(v&&p.verdict!==v)return false; if(c&&p.cat!==c)return false;
+    if(!q)return true;
+    return p.handle.toLowerCase().includes(q)||(p.reason||'').toLowerCase().includes(q)||(p.reskin||'').toLowerCase().includes(q)||(p.top_formats||[]).join(' ').toLowerCase().includes(q);
+  });
+  L.sort((a,b)=> s==="surf"?(b.surf_views||0)-(a.surf_views||0):s==="q"?(b.quality||0)-(a.quality||0):(b.similarity||0)-(a.similarity||0));
+  document.getElementById("grid").innerHTML=L.length?L.map(card).join(""):'<div class="empty">Sin resultados</div>';
+}
+function openP(h){
+  const p=D.profiles.find(x=>x.handle===h);if(!p)return;
+  const vids=(p.videos||[]).map(vd=>`<div class="vid"><span class="vw">👁 ${fmt(vd.views)}<br>${(vd.date||'').slice(0,10)}</span><div><div>${esc(vd.desc)}</div><a href="${vd.url}" target="_blank">ver ↗</a></div></div>`).join("")||'<div class="empty">sin posts</div>';
+  document.getElementById("drawer").innerHTML=`
+    <div class="dhead"><div><div class="nm" style="font-size:18px">@${p.handle}</div>
+    <div class="badges" style="margin-top:4px"><span class="pill l-${p.layer}">${p.layer}</span><span class="pill v-${p.verdict}">${vlabel(p.verdict)}</span><span class="pill">sim ${p.similarity}</span><span class="pill">${p.cat||''}</span><a class="pill" href="${p.profile_url}" target="_blank">TikTok ↗</a></div></div>
+    <button class="close" onclick="closeD()">✕</button></div>
+    <div class="sec"><h3>Veredicto</h3><div class="kv">
+    <div><b>Similaridad</b>${p.similarity}/100</div><div><b>Calidad</b>${p.quality}/5</div>${p.demo_bridge?`<div><b>Demo-bridge</b>${p.demo_bridge}/5</div>`:''}
+    ${p.feature?`<div><b>Feature RunnerPro</b>${esc(p.feature)}</div>`:''}<div><b>Surf views</b>${fmt(p.surf_views)}</div><div><b>Inglés</b>${p.english?'sí':'no'}</div></div>
+    <div class="reason" style="margin-top:8px">${esc(p.reason)}</div></div>
+    ${p.reskin?`<div class="sec"><h3>♻ Idea de re-skin a running</h3><div class="reskin">${esc(p.reskin)}</div></div>`:''}
+    <div class="sec"><h3>Formatos a robar</h3>${(p.top_formats||[]).map(f=>'<div class="fmt">• '+esc(f)+'</div>').join('')}</div>
+    <div class="sec"><h3>Frases que lo descubrieron</h3><div class="badges">${(p.phrases||[]).map(f=>'<span class="pill">'+esc(f)+'</span>').join('')}</div></div>
+    <div class="sec"><h3>Últimos posts</h3>${vids}</div>`;
+  document.getElementById("overlay").classList.add("on");document.getElementById("drawer").scrollTop=0;
+}
+function closeD(){document.getElementById("overlay").classList.remove("on");}
+document.getElementById("grid").addEventListener("click",e=>{const c=e.target.closest(".card");if(c)openP(c.dataset.h);});
+document.getElementById("overlay").addEventListener("click",e=>{if(e.target.id==="overlay")closeD();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeD();});
+["q","layer","verd","cat","sort"].forEach(id=>document.getElementById(id).addEventListener("input",render));
+render();
+</script>
+</body></html>

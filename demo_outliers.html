@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SpyTok DEMO — Outliers analizados</title>
+<style>
+  :root{--bg:#0d0d12;--panel:#16161f;--panel2:#1d1d28;--line:#2a2a38;--txt:#e8e8f0;--muted:#9090a8;--accent:#8b7bff;--green:#3ad17a;--red:#ff5d6c;--gold:#ffcb5b;}
+  *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  a{color:var(--accent);text-decoration:none}
+  header{position:sticky;top:0;z-index:30;background:rgba(13,13,18,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:12px 18px}
+  .brand{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.logo{width:30px;height:30px;border-radius:8px;background:var(--accent);display:grid;place-items:center;font-weight:800;color:#fff}
+  h1{font-size:18px;margin:0}.totals{color:var(--muted);font-size:12px}
+  .controls{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  input,select{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 10px;font-size:13px}input{flex:1;min-width:170px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;padding:18px}
+  .post{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;transition:.15s}
+  .post:hover{border-color:var(--accent);transform:translateY(-2px)}
+  .pwrap{position:relative}.cover{width:100%;aspect-ratio:9/16;object-fit:cover;background:var(--panel2);display:block}
+  .vws{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.75);color:#fff;font-weight:700;font-size:11px;padding:2px 7px;border-radius:999px}
+  .appb{position:absolute;top:6px;left:6px;background:rgba(139,123,255,.85);color:#fff;font-weight:600;font-size:10px;padding:2px 7px;border-radius:999px;max-width:75%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pbody{padding:8px;display:flex;flex-direction:column;gap:4px;font-size:12px}
+  .ot{font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:.4px}
+  .hk{max-height:54px;overflow:hidden}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;display:none}.overlay.on{display:block}
+  .drawer{position:absolute;right:0;top:0;bottom:0;width:min(640px,96vw);background:var(--bg);border-left:1px solid var(--line);overflow:auto}
+  .dhead{position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--line);padding:16px 18px;display:flex;gap:12px;align-items:center;z-index:5}
+  .close{margin-left:auto;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 12px;cursor:pointer}
+  .sec{padding:14px 18px}
+  .kv{padding:7px 0;border-bottom:1px solid var(--line)}.kv b{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  details{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:8px}details summary{cursor:pointer;color:var(--accent)}
+  details pre{white-space:pre-wrap;word-break:break-word;font:12px/1.4 inherit;margin:6px 0 0}
+  .btn{display:block;text-align:center;border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:6px;font-size:11px}
+  .metrics{display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--muted)}
+  .empty{color:var(--muted);padding:18px}
+</style></head>
+<body>
+<header>
+  <div class="brand"><div class="logo">D</div><div><h1>SpyTok DEMO — Outliers analizados</h1><div class="totals" id="totals"></div></div></div>
+  <div class="controls">
+    <input id="q" placeholder="Buscar app, hook, transcript…">
+    <select id="app"></select>
+    <select id="ot"><option value="">Tipo inicio</option></select>
+    <select id="sa"><option value="">App visible</option><option value="yes">muestra app</option><option value="no">no muestra app</option></select>
+    <select id="sort"><option value="views">Views ↓</option><option value="mult">Multiplier ↓</option></select>
+  </div>
+</header>
+<div class="grid" id="grid"></div>
+<div class="overlay" id="overlay"><div class="drawer" id="drawer"></div></div>
+<script src="data_demo.js"></script>
+<script>
+const D=window.DEMO; const fmt=n=>n==null?"—":Intl.NumberFormat("es").format(n);
+const esc=s=>String(s||'').replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const t=D.totals;
+document.getElementById("totals").textContent=`${t.videos} vídeos · ${t.with_frame} frames · ${t.with_desc} con visión · ${t.with_transcript} con transcript · ${t.apps} apps`;
+document.getElementById("app").innerHTML='<option value="">Todas las apps</option>'+D.apps.map(a=>`<option>${esc(a)}</option>`).join("");
+const ots=[...new Set(D.videos.map(v=>v.opening_type).filter(Boolean))].sort();
+document.getElementById("ot").innerHTML='<option value="">Tipo inicio</option>'+ots.map(o=>`<option>${o}</option>`).join("");
+let _list=[];
+function card(v,idx){
+  return `<div class="post" onclick="openV(${idx})"><div class="pwrap">
+    ${v.app?`<span class="appb">${esc(v.app)}</span>`:''}<span class="vws">👁 ${fmt(v.views)}</span>
+    ${v.frame?`<img class="cover" loading="lazy" src="${v.frame}">`:'<div class="cover"></div>'}</div>
+    <div class="pbody">${v.opening_type?`<div class="ot">${v.opening_type}${v.shows_app?' · app':''}</div>`:''}
+    <div class="hk">${esc(v.hook||v.desc)}</div></div></div>`;
+}
+function render(){
+  const q=document.getElementById("q").value.toLowerCase().trim();
+  const app=document.getElementById("app").value, ot=document.getElementById("ot").value, sa=document.getElementById("sa").value, s=document.getElementById("sort").value;
+  _list=D.videos.filter(v=>{
+    if(app&&v.app!==app)return false; if(ot&&v.opening_type!==ot)return false;
+    if(sa==="yes"&&!v.shows_app)return false; if(sa==="no"&&v.shows_app)return false;
+    if(!q)return true;
+    return (v.app||'').toLowerCase().includes(q)||(v.hook||'').toLowerCase().includes(q)||(v.desc||'').toLowerCase().includes(q)||(v.transcript||'').toLowerCase().includes(q);
+  });
+  _list.sort((a,b)=> s==="mult"?(b.mult||0)-(a.mult||0):(b.views||0)-(a.views||0));
+  document.getElementById("grid").innerHTML=_list.length?_list.map((v,i)=>card(v,i)).join(""):'<div class="empty">Sin resultados</div>';
+}
+function openV(idx){
+  const v=_list[idx];if(!v)return;
+  const kv=(k,val)=>val?`<div class="kv"><b>${k}</b>${esc(val)}</div>`:'';
+  const sbBlock=sb=>{if(!sb)return '';const L=[['Resumen visual','visual_summary'],['Personaje principal','main_character'],['Acción','action'],['Elementos','elements'],['Escenario','setting'],['Desarrollo (escena a escena)','development'],['Hook 0-3s (y por qué retiene)','hook_0_3s'],['Después del hook','post_hook'],['Retention drivers','retention_drivers'],['Títulos en pantalla','titles_on_screen'],['Ritmo','pacing'],['Lo importante','whats_important']];return `<div style="margin-top:14px;padding-top:10px;border-top:2px solid var(--accent)"><div style="font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:4px">🎬 Storyboard — análisis del vídeo completo</div>${L.map(([k,f])=>kv(k,sb[f])).join('')}</div>`;};
+  document.getElementById("drawer").innerHTML=`
+    <div class="dhead"><div><div style="font-weight:700">${esc(v.app)||'—'}</div><div class="metrics" style="margin-top:4px">👁 ${fmt(v.views)} ❤ ${fmt(v.likes)} 💬 ${fmt(v.comments)} 🔖 ${fmt(v.saves)} ↗ ${fmt(v.shares)} ${v.mult?'· '+v.mult+'x':''}</div></div><button class="close" onclick="closeV()">✕</button></div>
+    <div class="sec">
+      ${v.frame?`<img src="${v.frame}" style="width:100%;max-width:260px;border-radius:10px;display:block;margin:0 auto 12px">`:'<div class="empty">sin frame</div>'}
+      ${kv('Tipo de inicio (visión)',v.opening_type)}
+      ${kv('Muestra app',v.shows_app===true?'sí':v.shows_app===false?'no':'')}
+      ${kv('Escena',v.scene)}
+      ${kv('Texto en pantalla',v.on_screen_text)}
+      ${kv('Hook',v.hook)}
+      ${kv('Formato',v.format_signature)}
+      ${kv('Tema / qué vende',v.topic)}
+      ${kv('Creator',v.creator?('@'+v.creator):'')}
+      ${kv('Fecha',(v.date||'').slice(0,10))}
+      ${kv('Caption',v.desc)}
+      ${v.transcript?`<details open><summary>Transcripción</summary><pre>${esc(v.transcript)}</pre></details>`:'<div class="kv"><b>Transcripción</b>—</div>'}
+      ${v.blueprint?`<details><summary>Blueprint (spytok)</summary><pre>${esc(v.blueprint)}</pre></details>`:''}
+      ${sbBlock(v.sb)}
+      ${v.url?`<div style="margin-top:10px"><a class="btn" href="${v.url}" target="_blank">▶ Ver en TikTok ↗</a></div>`:''}
+    </div>`;
+  document.getElementById("overlay").classList.add("on");document.getElementById("drawer").scrollTop=0;
+}
+function closeV(){document.getElementById("overlay").classList.remove("on");}
+document.getElementById("overlay").addEventListener("click",e=>{if(e.target.id==="overlay")closeV();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeV();});
+["q","app","ot","sa","sort"].forEach(id=>document.getElementById(id).addEventListener("input",render));
+render();
+</script>
+</body></html>

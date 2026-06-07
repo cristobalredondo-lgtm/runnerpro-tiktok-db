@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RunnerPro — Outliers no-demo (carnada)</title>
+<style>
+  :root{--bg:#0d0d12;--panel:#16161f;--panel2:#1d1d28;--line:#2a2a38;--txt:#e8e8f0;--muted:#9090a8;--accent:#8b7bff;--green:#3ad17a;--red:#ff5d6c;--gold:#ffcb5b;--blue:#5bb8ff;}
+  *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  a{color:var(--accent);text-decoration:none}
+  header{position:sticky;top:0;z-index:30;background:rgba(13,13,18,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:12px 18px}
+  .brand{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.logo{width:30px;height:30px;border-radius:8px;background:var(--accent);display:grid;place-items:center;font-weight:800;color:#fff}
+  h1{font-size:18px;margin:0}.totals{color:var(--muted);font-size:12px}
+  .controls{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  input,select{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 10px;font-size:13px}input{flex:1;min-width:160px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;padding:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;transition:.15s;display:flex;flex-direction:column;gap:8px}
+  .card:hover{border-color:var(--accent);transform:translateY(-2px)}
+  .l-runner{border-left:3px solid var(--accent)}.l-adyacente{border-left:3px solid var(--blue)}
+  .row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.nm{font-weight:700;font-size:15px}
+  .badges{display:flex;gap:6px;flex-wrap:wrap;font-size:11px}.pill{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:2px 8px}
+  .bars{display:flex;align-items:flex-end;gap:2px;height:30px}.bar{flex:1;background:var(--accent);border-radius:2px 2px 0 0;min-height:2px;opacity:.8}
+  .meta{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:auto}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;display:none}.overlay.on{display:block}
+  .drawer{position:absolute;right:0;top:0;bottom:0;width:min(980px,97vw);background:var(--bg);border-left:1px solid var(--line);overflow:auto}
+  .dhead{position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--line);padding:16px 18px;display:flex;gap:12px;align-items:center;z-index:5}
+  .close{margin-left:auto;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 12px;cursor:pointer}
+  .sec{padding:14px 18px}
+  .posts{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+  .post{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+  .pwrap{position:relative}.cover{width:100%;aspect-ratio:9/16;object-fit:cover;background:var(--panel2);display:block}
+  .mult{position:absolute;top:6px;left:6px;background:var(--red);color:#fff;font-weight:800;font-size:11px;padding:2px 7px;border-radius:999px}
+  .vws{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.75);color:#fff;font-weight:700;font-size:11px;padding:2px 7px;border-radius:999px}
+  .pbody{padding:8px;display:flex;flex-direction:column;gap:5px;font-size:12px}
+  .ot{font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:.4px}
+  .scene{color:var(--muted)}.pdesc{max-height:42px;overflow:hidden}
+  .btn{text-align:center;border:1px solid var(--line);border-radius:6px;padding:5px;font-size:11px}
+  .empty{color:var(--muted);padding:18px}
+</style></head>
+<body>
+<header>
+  <div class="brand"><div class="logo">O</div><div><h1>RunnerPro — Outliers no-demo (carnada)</h1><div class="totals" id="totals"></div></div></div>
+  <div class="controls">
+    <input id="q" placeholder="Buscar handle…">
+    <select id="layer"><option value="">Capa</option><option value="runner">🟣 runner</option><option value="adyacente">🔵 adyacente</option></select>
+    <select id="mult"><option value="3">≥ 3x (todos)</option><option value="10">≥ 10x</option><option value="25">≥ 25x</option><option value="50">≥ 50x</option><option value="100">≥ 100x</option></select>
+    <select id="minv"><option value="50000">≥ 50k views</option><option value="100000">≥ 100k</option><option value="500000">≥ 500k</option><option value="1000000">≥ 1M</option></select>
+    <select id="sort"><option value="topv">Top views ↓</option><option value="topm">Top multiplier ↓</option><option value="nout">Nº outliers ↓</option></select>
+  </div>
+</header>
+<div class="grid" id="grid"></div>
+<div class="overlay" id="overlay"><div class="drawer" id="drawer"></div></div>
+<div class="overlay" id="overlay2" style="z-index:60"><div class="drawer" id="drawer2" style="width:min(620px,96vw)"></div></div>
+<script src="data_outliers.js"></script>
+<script>
+const D=window.OUT; const fmt=n=>n==null?"—":Intl.NumberFormat("es").format(n);
+const esc=s=>String(s||'').replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+function flt(){return {m:+document.getElementById("mult").value,v:+document.getElementById("minv").value};}
+function outsOf(p){const{m,v}=flt();return p.outliers.filter(o=>(o.mult||0)>=m&&(o.views||0)>=v);}
+function setTotals(){
+  const{m,v}=flt();let po=0,pn=0;
+  D.profiles.forEach(p=>{const o=outsOf(p);if(o.length){pn++;po+=o.length;}});
+  document.getElementById("totals").textContent=`${pn} perfiles · ${po} outliers (≥${m}x · ≥${fmt(v)} views) · total bruto ${fmt(D.totals.outliers)}`;
+}
+function bars(outs){const vs=outs.slice(0,10).map(o=>o.views||0);const mx=Math.max(...vs,1);return `<div class="bars">${vs.map(v=>`<div class="bar" style="height:${Math.max(4,v/mx*30)}px"></div>`).join("")}</div>`;}
+function card(p,outs){
+  return `<div class="card l-${p.layer}" data-h="${p.handle}">
+    <div class="row"><div class="nm">@${p.handle}</div><span class="pill">${p.verdict.replace('feeder_','').replace('_',' ')}</span></div>
+    <div class="badges"><span class="pill">${outs.length} outliers</span><span class="pill">top ${fmt(outs[0]?.views)}</span><span class="pill" style="color:var(--red)">${outs[0]?.mult}x max</span></div>
+    ${bars(outs)}
+    <div class="meta"><span>med ${fmt(p.median)} · ${p.n_videos} vids</span><a href="${p.profile_url}" target="_blank" onclick="event.stopPropagation()">TikTok ↗</a></div>
+  </div>`;
+}
+function render(){
+  setTotals();
+  const q=document.getElementById("q").value.toLowerCase().trim();
+  const ly=document.getElementById("layer").value, s=document.getElementById("sort").value;
+  let L=D.profiles.map(p=>({p,outs:outsOf(p)})).filter(x=>x.outs.length);
+  if(ly)L=L.filter(x=>x.p.layer===ly);
+  if(q)L=L.filter(x=>x.p.handle.toLowerCase().includes(q));
+  L.forEach(x=>x.outs.sort((a,b)=>(b.views||0)-(a.views||0)));
+  L.sort((a,b)=> s==="topm"?(b.outs[0].mult||0)-(a.outs[0].mult||0) : s==="nout"?b.outs.length-a.outs.length : (b.outs[0].views||0)-(a.outs[0].views||0));
+  document.getElementById("grid").innerHTML=L.length?L.map(x=>card(x.p,x.outs)).join(""):'<div class="empty">Sin resultados con este filtro</div>';
+}
+function openP(h){
+  const p=D.profiles.find(x=>x.handle===h);if(!p)return;const outs=outsOf(p).sort((a,b)=>(b.views||0)-(a.views||0));
+  const posts=outs.map((o,idx)=>`<div class="post" onclick="openO('${h}',${idx})" style="cursor:pointer"><div class="pwrap">
+    <span class="mult">${o.mult}x</span><span class="vws">👁 ${fmt(o.views)}</span>
+    ${o.frame?`<img class="cover" loading="lazy" src="${o.frame}">`:'<div class="cover"></div>'}</div>
+    <div class="pbody">${o.opening_type?`<div class="ot">${o.opening_type}</div>`:''}
+    ${o.scene?`<div class="scene">${esc(o.scene)}</div>`:''}
+    <div class="pdesc">${esc(o.hook||o.desc)}</div>
+    <div style="color:var(--muted);font-size:11px">${(o.date||'').slice(0,10)}</div></div></div>`).join("");
+  window._cur={h,outs};
+  document.getElementById("drawer").innerHTML=`<div class="dhead"><div><div class="nm" style="font-size:18px">@${p.handle}</div>
+    <div class="badges" style="margin-top:4px"><span class="pill l-${p.layer}">${p.layer}</span><span class="pill">${p.verdict}</span><span class="pill">sim ${p.similarity}</span><span class="pill">med ${fmt(p.median)}</span><a class="pill" href="${p.profile_url}" target="_blank">TikTok ↗</a></div></div>
+    <button class="close" onclick="closeD()">✕</button></div>
+    <div class="sec"><div class="badges" style="margin-bottom:10px"><span class="pill">${outs.length} outliers (filtro actual)</span><span class="pill">de ${p.n_outliers} totales</span></div>
+    <div class="posts">${posts||'<div class="empty">sin outliers en este filtro</div>'}</div></div>`;
+  document.getElementById("overlay").classList.add("on");document.getElementById("drawer").scrollTop=0;
+}
+function kv(k,v){return v?`<div style="padding:7px 0;border-bottom:1px solid var(--line)"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${k}</div><div>${esc(v)}</div></div>`:'';}
+function sbBlock(sb){
+  if(!sb) return '';
+  const L=[['Resumen visual','visual_summary'],['Personaje principal','main_character'],['Acción','action'],['Elementos','elements'],['Escenario','setting'],['Desarrollo (escena a escena)','development'],['Hook 0-3s (y por qué retiene)','hook_0_3s'],['Después del hook','post_hook'],['Retention drivers','retention_drivers'],['Títulos en pantalla','titles_on_screen'],['Ritmo','pacing'],['Lo importante','whats_important']];
+  return `<div style="margin-top:14px;padding-top:10px;border-top:2px solid var(--accent)"><div style="font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:4px">🎬 Storyboard — análisis del vídeo completo</div>${L.map(([k,f])=>kv(k,sb[f])).join('')}</div>`;
+}
+function openO(h,idx){
+  const o=window._cur.outs[idx];if(!o)return;
+  document.getElementById("drawer2").innerHTML=`
+    <div class="dhead"><div><div class="nm">@${h}</div><div class="badges" style="margin-top:4px"><span class="pill" style="color:var(--red)">${o.mult}x</span><span class="pill">👁 ${fmt(o.views)}</span><span class="pill">${(o.date||'').slice(0,10)}</span></div></div><button class="close" onclick="closeO()">✕</button></div>
+    <div class="sec">
+      ${o.frame?`<img src="${o.frame}" style="width:100%;max-width:280px;border-radius:10px;display:block;margin:0 auto 12px">`:'<div class="empty">frame pendiente de descarga</div>'}
+      ${kv('Tipo de inicio (visión)',o.opening_type)}
+      ${kv('Escena (qué se ve)',o.scene)}
+      ${kv('Texto en pantalla',o.on_screen_text)}
+      ${kv('Hook',o.hook)}
+      ${kv('Formato',o.format_signature)}
+      ${kv('Tema / nivel conciencia',o.topic)}
+      ${kv('Caption original',o.desc)}
+      ${kv('Transcripción (subtítulos)',o.transcript)}
+      ${sbBlock(o.sb)}
+      <div style="padding:10px 0"><a class="btn" style="border-color:var(--accent);color:var(--accent)" href="${o.url}" target="_blank">▶ Ver vídeo en TikTok ↗</a></div>
+      ${(!o.opening_type&&!o.transcript)?'<div class="empty" style="padding:8px 0">⏳ Visión + transcripción aún no procesadas para este outlier</div>':''}
+    </div>`;
+  document.getElementById("overlay2").classList.add("on");document.getElementById("drawer2").scrollTop=0;
+}
+function closeO(){document.getElementById("overlay2").classList.remove("on");}
+document.getElementById("overlay2").addEventListener("click",e=>{if(e.target.id==="overlay2")closeO();});
+function closeD(){document.getElementById("overlay").classList.remove("on");}
+document.getElementById("grid").addEventListener("click",e=>{const c=e.target.closest(".card");if(c)openP(c.dataset.h);});
+document.getElementById("overlay").addEventListener("click",e=>{if(e.target.id==="overlay")closeD();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeD();});
+["q","layer","mult","minv","sort"].forEach(id=>document.getElementById(id).addEventListener("input",render));
+render();
+</script>
+</body></html>
