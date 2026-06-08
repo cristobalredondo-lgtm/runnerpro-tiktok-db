@@ -1,0 +1,7 @@
+.git
+.gitignore
+Dockerfile
+.dockerignore
+.gcloudignore
+serve.sh
+vercel.json
