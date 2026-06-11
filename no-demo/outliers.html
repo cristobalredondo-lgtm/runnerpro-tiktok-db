@@ -30,6 +30,8 @@
   .pwrap{position:relative}.cover{width:100%;aspect-ratio:9/16;object-fit:cover;background:var(--panel2);display:block}
   .mult{position:absolute;top:6px;left:6px;background:var(--red);color:#fff;font-weight:800;font-size:11px;padding:2px 7px;border-radius:999px}
   .vws{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.75);color:#fff;font-weight:700;font-size:11px;padding:2px 7px;border-radius:999px}
+  .tbadge{position:absolute;bottom:6px;left:6px;background:rgba(0,0,0,.78);font-weight:700;font-size:10px;padding:2px 7px;border-radius:999px}
+  .tbadge.tc{color:var(--gold)}.tbadge.tv{color:var(--muted)}
   .pbody{padding:8px;display:flex;flex-direction:column;gap:5px;font-size:12px}
   .ot{font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:.4px}
   .scene{color:var(--muted)}.pdesc{max-height:42px;overflow:hidden}
@@ -42,6 +44,7 @@
   <div class="controls">
     <input id="q" placeholder="Buscar handle…">
     <select id="layer"><option value="">Capa</option><option value="runner">🟣 runner</option><option value="adyacente">🔵 adyacente</option></select>
+    <select id="ctype"><option value="">Tipo: todos</option><option value="video">🎬 Vídeo</option><option value="carousel">🖼 Carrusel</option></select>
     <select id="mult"><option value="3">≥ 3x (todos)</option><option value="10">≥ 10x</option><option value="25">≥ 25x</option><option value="50">≥ 50x</option><option value="100">≥ 100x</option></select>
     <select id="minv"><option value="50000">≥ 50k views</option><option value="100000">≥ 100k</option><option value="500000">≥ 500k</option><option value="1000000">≥ 1M</option></select>
     <select id="sort"><option value="topv">Top views ↓</option><option value="topm">Top multiplier ↓</option><option value="nout">Nº outliers ↓</option></select>
@@ -54,18 +57,18 @@
 <script>
 const D=window.OUT; const fmt=n=>n==null?"—":Intl.NumberFormat("es").format(n);
 const esc=s=>String(s||'').replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
-function flt(){return {m:+document.getElementById("mult").value,v:+document.getElementById("minv").value};}
-function outsOf(p){const{m,v}=flt();return p.outliers.filter(o=>(o.mult||0)>=m&&(o.views||0)>=v);}
+function flt(){return {m:+document.getElementById("mult").value,v:+document.getElementById("minv").value,t:document.getElementById("ctype").value};}
+function outsOf(p){const{m,v,t}=flt();return p.outliers.filter(o=>(o.mult||0)>=m&&(o.views||0)>=v&&(!t||(o.type||"video")===t));}
 function setTotals(){
-  const{m,v}=flt();let po=0,pn=0;
-  D.profiles.forEach(p=>{const o=outsOf(p);if(o.length){pn++;po+=o.length;}});
-  document.getElementById("totals").textContent=`${pn} perfiles · ${po} outliers (≥${m}x · ≥${fmt(v)} views) · total bruto ${fmt(D.totals.outliers)}`;
+  const{m,v}=flt();let po=0,pn=0,pc=0;
+  D.profiles.forEach(p=>{const o=outsOf(p);if(o.length){pn++;po+=o.length;pc+=o.filter(x=>x.type==="carousel").length;}});
+  document.getElementById("totals").textContent=`${pn} perfiles · ${po} outliers (🖼 ${pc} carruseles) (≥${m}x · ≥${fmt(v)} views) · total bruto ${fmt(D.totals.outliers)}`;
 }
 function bars(outs){const vs=outs.slice(0,10).map(o=>o.views||0);const mx=Math.max(...vs,1);return `<div class="bars">${vs.map(v=>`<div class="bar" style="height:${Math.max(4,v/mx*30)}px"></div>`).join("")}</div>`;}
 function card(p,outs){
   return `<div class="card l-${p.layer}" data-h="${p.handle}">
     <div class="row"><div class="nm">@${p.handle}</div><span class="pill">${p.verdict.replace('feeder_','').replace('_',' ')}</span></div>
-    <div class="badges"><span class="pill">${outs.length} outliers</span><span class="pill">top ${fmt(outs[0]?.views)}</span><span class="pill" style="color:var(--red)">${outs[0]?.mult}x max</span></div>
+    <div class="badges"><span class="pill">${outs.length} outliers</span>${(c=>c?`<span class="pill" style="color:var(--gold)">🖼 ${c}</span>`:'')(outs.filter(o=>o.type==="carousel").length)}<span class="pill">top ${fmt(outs[0]?.views)}</span><span class="pill" style="color:var(--red)">${outs[0]?.mult}x max</span></div>
     ${bars(outs)}
     <div class="meta"><span>med ${fmt(p.median)} · ${p.n_videos} vids</span><a href="${p.profile_url}" target="_blank" onclick="event.stopPropagation()">TikTok ↗</a></div>
   </div>`;
@@ -85,6 +88,7 @@ function openP(h){
   const p=D.profiles.find(x=>x.handle===h);if(!p)return;const outs=outsOf(p).sort((a,b)=>(b.views||0)-(a.views||0));
   const posts=outs.map((o,idx)=>`<div class="post" onclick="openO('${h}',${idx})" style="cursor:pointer"><div class="pwrap">
     <span class="mult">${o.mult}x</span><span class="vws">👁 ${fmt(o.views)}</span>
+    ${o.type==="carousel"?`<span class="tbadge tc">🖼 carrusel${o.n_images?` · ${o.n_images}`:''}</span>`:'<span class="tbadge tv">🎬 vídeo</span>'}
     ${o.frame?`<img class="cover" loading="lazy" src="${o.frame}">`:'<div class="cover"></div>'}</div>
     <div class="pbody">${o.opening_type?`<div class="ot">${o.opening_type}</div>`:''}
     ${o.scene?`<div class="scene">${esc(o.scene)}</div>`:''}
@@ -99,15 +103,16 @@ function openP(h){
   document.getElementById("overlay").classList.add("on");document.getElementById("drawer").scrollTop=0;
 }
 function kv(k,v){return v?`<div style="padding:7px 0;border-bottom:1px solid var(--line)"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${k}</div><div>${esc(v)}</div></div>`:'';}
-function sbBlock(sb){
+function sbBlock(sb,type){
   if(!sb) return '';
-  const L=[['Resumen visual','visual_summary'],['Personaje principal','main_character'],['Acción','action'],['Elementos','elements'],['Escenario','setting'],['Desarrollo (escena a escena)','development'],['Hook 0-3s (y por qué retiene)','hook_0_3s'],['Después del hook','post_hook'],['Retention drivers','retention_drivers'],['Títulos en pantalla','titles_on_screen'],['Ritmo','pacing'],['Lo importante','whats_important']];
-  return `<div style="margin-top:14px;padding-top:10px;border-top:2px solid var(--accent)"><div style="font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:4px">🎬 Storyboard — análisis del vídeo completo</div>${L.map(([k,f])=>kv(k,sb[f])).join('')}</div>`;
+  const car=type==="carousel";
+  const L=[['Resumen visual','visual_summary'],['Personaje principal','main_character'],['Acción','action'],['Elementos','elements'],['Escenario','setting'],[car?'Desarrollo (slide a slide)':'Desarrollo (escena a escena)','development'],[car?'Primera slide (hook) y por qué retiene':'Hook 0-3s (y por qué retiene)','hook_0_3s'],['Después del hook','post_hook'],['Retention drivers','retention_drivers'],['Títulos en pantalla','titles_on_screen'],['Ritmo','pacing'],['Lo importante','whats_important']];
+  return `<div style="margin-top:14px;padding-top:10px;border-top:2px solid var(--accent)"><div style="font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:4px">${car?'🖼 Storyboard — análisis del carrusel (slides)':'🎬 Storyboard — análisis del vídeo completo'}</div>${L.map(([k,f])=>kv(k,sb[f])).join('')}</div>`;
 }
 function openO(h,idx){
   const o=window._cur.outs[idx];if(!o)return;
   document.getElementById("drawer2").innerHTML=`
-    <div class="dhead"><div><div class="nm">@${h}</div><div class="badges" style="margin-top:4px"><span class="pill" style="color:var(--red)">${o.mult}x</span><span class="pill">👁 ${fmt(o.views)}</span><span class="pill">${(o.date||'').slice(0,10)}</span></div></div><button class="close" onclick="closeO()">✕</button></div>
+    <div class="dhead"><div><div class="nm">@${h}</div><div class="badges" style="margin-top:4px"><span class="pill" style="color:var(--gold)">${o.type==="carousel"?`🖼 Carrusel${o.n_images?` · ${o.n_images} slides`:''}`:'🎬 Vídeo'}</span><span class="pill" style="color:var(--red)">${o.mult}x</span><span class="pill">👁 ${fmt(o.views)}</span><span class="pill">${(o.date||'').slice(0,10)}</span></div></div><button class="close" onclick="closeO()">✕</button></div>
     <div class="sec">
       ${o.frame?`<img src="${o.frame}" style="width:100%;max-width:280px;border-radius:10px;display:block;margin:0 auto 12px">`:'<div class="empty">frame pendiente de descarga</div>'}
       ${kv('Tipo de inicio (visión)',o.opening_type)}
@@ -118,9 +123,9 @@ function openO(h,idx){
       ${kv('Tema / nivel conciencia',o.topic)}
       ${kv('Caption original',o.desc)}
       ${kv('Transcripción (subtítulos)',o.transcript)}
-      ${sbBlock(o.sb)}
-      <div style="padding:10px 0"><a class="btn" style="border-color:var(--accent);color:var(--accent)" href="${o.url}" target="_blank">▶ Ver vídeo en TikTok ↗</a></div>
-      ${(!o.opening_type&&!o.transcript)?'<div class="empty" style="padding:8px 0">⏳ Visión + transcripción aún no procesadas para este outlier</div>':''}
+      ${sbBlock(o.sb,o.type)}
+      <div style="padding:10px 0"><a class="btn" style="border-color:var(--accent);color:var(--accent)" href="${o.url}" target="_blank">${o.type==="carousel"?'▶ Ver carrusel en TikTok ↗':'▶ Ver vídeo en TikTok ↗'}</a></div>
+      ${(!o.opening_type&&!o.transcript&&!o.sb)?'<div class="empty" style="padding:8px 0">⏳ Visión + transcripción aún no procesadas para este outlier</div>':''}
     </div>`;
   document.getElementById("overlay2").classList.add("on");document.getElementById("drawer2").scrollTop=0;
 }
@@ -130,7 +135,7 @@ function closeD(){document.getElementById("overlay").classList.remove("on");}
 document.getElementById("grid").addEventListener("click",e=>{const c=e.target.closest(".card");if(c)openP(c.dataset.h);});
 document.getElementById("overlay").addEventListener("click",e=>{if(e.target.id==="overlay")closeD();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeD();});
-["q","layer","mult","minv","sort"].forEach(id=>document.getElementById(id).addEventListener("input",render));
+["q","layer","ctype","mult","minv","sort"].forEach(id=>document.getElementById(id).addEventListener("input",render));
 render();
 </script>
 </body></html>
